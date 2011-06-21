@@ -87,4 +87,9 @@ if __name__ == '__main__':
     username = 'Yamada'
     channels = ['yamada_test']
     client = IRCClient(host, port, nick, username, channels)
-    loop(timeout=1)
+    try:
+        loop(timeout=1)
+    except KeyboardInterrupt:
+        print 'Terminated from console.'
+    except:
+        print 'Terminated due to fatal error.'
