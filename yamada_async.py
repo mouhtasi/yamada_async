@@ -43,13 +43,20 @@ class IRCClient(async_chat):
 
         if code == 'PRIVMSG':
             dest = token[2]
-            msg = token[3]
+            msg = token[3].lstrip(':')
+            ctr = 4
+            while ctr < len(token):
+                msg += ' ' + token[ctr]
+                ctr += 1
+
             nick, user, host = self.split_netmask(src)
             if dest == self.nick and '\x01PING' in msg:
                 if len(token) >= 5:
-                    self.notice(nick, '\x01PING %s\x01' % token[4][:-1])
+                    self.notice(nick, msg)
                 else:
                     self.notice(nick, '\x01PING\x01')
+            elif msg[0] == '!':
+                self.triggers(dest, msg)
         elif src == 'PING':
             self.send_data('PONG %s' % token[1])
         elif code == '376' or code == '422': # end of MOTD or MOTD not found
@@ -79,6 +86,13 @@ class IRCClient(async_chat):
     def notice(self, dest, msg):
         '''Send a notice to a user.'''
         self.send_data('NOTICE %s :%s' % (dest, msg))
+
+    def triggers(self, dest, message):
+        '''Actions to perform when a trigger is triggered.'''
+        trigger, sep, msg = message.partition(' ')
+
+        if trigger == '!echo':
+            self.msg(dest, msg)
 
 if __name__ == '__main__':
     from asyncore import loop
