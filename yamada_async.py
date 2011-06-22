@@ -55,13 +55,16 @@ class IRCClient(async_chat):
                     self.notice(nick, msg)
                 else:
                     self.notice(nick, '\x01PING\x01')
+            elif dest == self.nick and nick == 'gesshoki':
+                if '!raw' in msg:
+                    trigger, sep, cmd = msg.partition(' ')
+                    self.send_data(cmd)
             elif msg[0] == '!':
                 self.triggers(dest, msg)
         elif src == 'PING':
             self.send_data('PONG %s' % token[1])
         elif code == '376' or code == '422': # end of MOTD or MOTD not found
             self.connection_made()
-
     def found_terminator(self):
         self.handle_data(self.recieved_data)
         self.recieved_data = ''
@@ -97,6 +100,7 @@ class IRCClient(async_chat):
 if __name__ == '__main__':
     from asyncore import loop
     host, port = 'irc.rizon.net', 6667
+    owner = 'botowner'
     nick = 'Yamadabot'
     username = 'Yamada'
     channels = ['yamada_test']
