@@ -92,6 +92,10 @@ class IRCClient(async_chat):
         '''Send a notice to a user.'''
         self.send_data('NOTICE %s :%s' % (dest, msg))
 
+    def action(self, dest, msg):
+        '''Do an action in a channel.'''
+        self.msg(dest, '\x01ACTION %s\x01' % msg)
+
     def triggers(self, dest, message):
         '''Actions to perform when a trigger is triggered.'''
         trigger, sep, msg = message.partition(' ')
@@ -102,7 +106,6 @@ class IRCClient(async_chat):
     def owner_triggers(self, dest, message):
         '''Triggers which are only triggered in PM from bot owner.'''
         trigger, sep, text = message.partition(' ')
-        print trigger, sep, text
 
         if trigger == '!raw':
             self.send_data(text)
@@ -112,6 +115,9 @@ class IRCClient(async_chat):
             if trigger == '!say':
                 #!say <nick/channel> <text>
                 self.msg(dest, msg)
+            elif trigger == '!do':
+                #!do <nick/channel> <text>
+                self.action(dest, msg)
 
 if __name__ == '__main__':
     from asyncore import loop
