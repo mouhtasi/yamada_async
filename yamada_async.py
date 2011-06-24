@@ -13,6 +13,7 @@ class IRCClient(async_chat):
         self.nick = nick
         self.user = user
         self.channels = [] if (channels is None) else channels
+        self.topic_req = ('', False)
         self.recieved_data = ''
         self.create_socket(AF_INET, SOCK_STREAM)
         self.connect((host, port))
@@ -64,6 +65,13 @@ class IRCClient(async_chat):
 
         elif src == 'PING':
             self.send_data('PONG %s' % token[1])
+        elif code == '332' and self.topic_req[1]:
+            msg = token[4].lstrip(':')
+            ctr = 5
+            while ctr < len(token):
+                msg += ' ' + token[ctr]
+                ctr += 1
+            self.send_topic(self.topic_req[0], msg)
         elif code == '376' or code == '422': # end of MOTD or MOTD not found
             self.connection_made()
 
@@ -96,12 +104,24 @@ class IRCClient(async_chat):
         '''Do an action in a channel.'''
         self.msg(dest, '\x01ACTION %s\x01' % msg)
 
+    def request_topic(self, chan):
+        '''Request the topic of chan.'''
+        self.send_data('TOPIC %s' % chan)
+        self.topic_req = (chan, True)
+
+    def send_topic(self, chan, topic):
+        '''Print the topic of chan.'''
+        self.msg(chan, 'Topic for %s is: %s' % (chan, topic))
+        self.topic_req = ('', False)
+
     def triggers(self, dest, message):
         '''Actions to perform when a trigger is triggered.'''
         trigger, sep, msg = message.partition(' ')
 
         if trigger == '!echo':
             self.msg(dest, msg)
+        elif trigger == '!topic':
+            self.request_topic(dest)
 
     def owner_triggers(self, dest, message):
         '''Triggers which are only triggered in PM from bot owner.'''
