@@ -13,7 +13,7 @@ class IRCClient(async_chat):
         self.nick = nick
         self.user = user
         self.channels = [] if (channels is None) else channels
-        self.topic_req = ('', False)
+        self.topic_req = ('', False, '')
         self.recieved_data = ''
         self.create_socket(AF_INET, SOCK_STREAM)
         self.connect((host, port))
@@ -66,12 +66,18 @@ class IRCClient(async_chat):
         elif src == 'PING':
             self.send_data('PONG %s' % token[1])
         elif code == '332' and self.topic_req[1]:
-            msg = token[4].lstrip(':')
+            topic = token[4].lstrip(':')
             ctr = 5
             while ctr < len(token):
-                msg += ' ' + token[ctr]
+                topic += ' ' + token[ctr]
                 ctr += 1
-            self.send_topic(self.topic_req[0], msg)
+            self.topic_req = (self.topic_req[0], self.topic_req[1], topic)
+        elif code == '333' and self.topic_req[1]:
+            by = token[4]
+            time = token[5]
+
+            self.send_topic(self.topic_req[0], self.topic_req[2], time, by)
+
         elif code == '376' or code == '422': # end of MOTD or MOTD not found
             self.connection_made()
 
@@ -109,9 +115,15 @@ class IRCClient(async_chat):
         self.send_data('TOPIC %s' % chan)
         self.topic_req = (chan, True)
 
-    def send_topic(self, chan, topic):
+    def send_topic(self, chan, topic, time_ch, by):
         '''Print the topic of chan.'''
-        self.msg(chan, 'Topic for %s is: %s' % (chan, topic))
+
+        if '!' in by:
+            by, user, host = self.split_netmask(by)
+
+        time_ch = time.strftime('%m/%d/%Y %H:%M', time.gmtime())
+        self.msg(chan, 'Topic for %s is: "%s" set by %s on %s' % (chan, topic,
+                                                                  by, time_ch))
         self.topic_req = ('', False)
 
     def triggers(self, dest, message):
