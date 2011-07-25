@@ -1,6 +1,7 @@
 from asynchat import async_chat
 from socket import AF_INET, SOCK_STREAM
 import time
+import logger
 
 class IRCClient(async_chat):
     terminator = '\r\n'
@@ -21,8 +22,9 @@ class IRCClient(async_chat):
     def connection_made(self):
         '''Actions to take when a connection is made with the server.'''
         self.send_data('MODE %s +iB' % self.nick)  # set user mode invisible and bot
+        log.log('Connected to %s as %s.' % (self.host, self.nick))
         for channel in self.channels:
-            self.send_data('JOIN #%s' % channel)
+            self.join(channel)
 
     def send_data(self, data):
         '''Send data to the server.'''
@@ -112,6 +114,18 @@ class IRCClient(async_chat):
         host = netmask.split('@')[1]
         return (nick, user, host)
 
+    def join(self, channel):
+        if channel[0] != '#':
+            channel = '#%s' % channel
+        self.send_data('JOIN %s' % channel)
+        log.log('Joined %s.' % channel)
+
+    def part(self, channel, reason):
+        if channel[0] != '#':
+            channel = '#%s' % channel
+        self.send_data('PART %s :%s' % (channel, reason))
+        log.log('Left %s. Reason: %s' % (channel, reason))
+
     def msg(self, user, data):
         '''Send a message to a user.'''
         self.send_data('PRIVMSG %s :%s' % (user, data))
@@ -167,6 +181,10 @@ class IRCClient(async_chat):
             elif trigger == '!do':
                 #!do <nick/channel> <text>
                 self.action(dest, msg)
+            elif trigger == '!join':
+                self.join(dest)
+            elif trigger == '!part':
+                self.part(dest, msg)
 
 if __name__ == '__main__':
     from asyncore import loop
@@ -176,9 +194,15 @@ if __name__ == '__main__':
     username = 'Yamada'
     channels = ['yamada_test']
     client = IRCClient(host, port, nick, username, channels)
+    logfile = '%s.log' % nick
+
     try:
+        global log
+        log = logger.Logger(logfile)
         loop(timeout=1)
     except KeyboardInterrupt:
-        print 'Terminated from console.'
+        log.close_log('Terminated by user.')
+        print 'Terminated by user.'
     except:
+        log.close_log('Fatal error.')
         print 'Terminated due to fatal error.'
