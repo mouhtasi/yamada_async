@@ -1,0 +1,7 @@
+﻿host: "irc.rizon.net"
+port: 6667
+owner: botowner
+nick: Yamadabot
+username: Yamada
+channels: [yamada_test]
+logfile: "Yamada_Aoi.log"

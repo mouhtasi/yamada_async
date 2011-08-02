@@ -2,6 +2,7 @@ from asynchat import async_chat
 from socket import AF_INET, SOCK_STREAM
 import time
 import logger
+import yaml
 
 class IRCClient(async_chat):
     terminator = '\r\n'
@@ -21,7 +22,7 @@ class IRCClient(async_chat):
 
     def connection_made(self):
         '''Actions to take when a connection is made with the server.'''
-        self.send_data('MODE %s +iB' % self.nick)  # set user mode invisible and bot
+        self.send_data('MODE %s +iB' % self.nick)  # user mode invisible and bot
         log.log('Connected to %s as %s.' % (self.host, self.nick))
         for channel in self.channels:
             self.join(channel)
@@ -34,7 +35,7 @@ class IRCClient(async_chat):
 
     def handle_connect(self):
         '''Actions to take when creating the connection.'''
-        self.send_data('NICK :%s' % nick)
+        self.send_data('NICK :%s' % self.nick)
         self.send_data('USER %s 0 %s :%s' % (self.user, self.user, self.user))
 
     def handle_data(self, data):
@@ -65,11 +66,7 @@ class IRCClient(async_chat):
                 else:
                     self.triggers(dest, msg)
 
-        elif src == 'PING':
-            self.send_data('PONG %s' % token[1])
-
         elif code == 'TOPIC':
-            print 'got a topic thing'
             chan = token[2]
             topic = token[3].lstrip(':')
             ctr = 4
@@ -80,6 +77,8 @@ class IRCClient(async_chat):
             nick, _, _ = self.split_netmask(src)
             self.topic_change(chan, topic, nick)
 
+        elif src == 'PING':
+            self.send_data('PONG %s' % token[1])
         elif code == '332':
             topic = token[4].lstrip(':')
             ctr = 5
@@ -188,13 +187,13 @@ class IRCClient(async_chat):
 
 if __name__ == '__main__':
     from asyncore import loop
-    host, port = 'irc.rizon.net', 6667
-    owner = 'botowner'
-    nick = 'Yamadabot'
-    username = 'Yamada'
-    channels = ['yamada_test']
-    client = IRCClient(host, port, nick, username, channels)
-    logfile = '%s.log' % nick
+    conf = open('config.yaml', 'r')
+    config = yaml.load(conf)
+    conf.close()
+    owner = config['owner']
+    client = IRCClient(config['host'], config['port'], config['nick'],
+                       config['username'], config['channels'])
+    logfile = config['logfile']
 
     try:
         global log
