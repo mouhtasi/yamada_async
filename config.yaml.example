@@ -3,5 +3,6 @@ port: 6667
 owner: botowner
 nick: Yamadabot
 username: Yamada
+nick_pass:
 channels: [yamada_test]
 logfile: "Yamada_Aoi.log"

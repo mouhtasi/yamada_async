@@ -28,11 +28,13 @@ if __name__ == '__main__':
     log = logger.Logger(logfile)
 
     client = irc.IRCClient(config['host'], config['port'], config['nick'],
-                       config['username'], config['channels'], log)
+                           config['username'], '' if (config['nick_pass'] is None)
+                           else config['nick_pass'], config['channels'], log)
 
     try:
         loop(timeout=1)
     except KeyboardInterrupt:
+        client.save_seen()
         log.close_log('Terminated by user.')
         print 'Terminated by user.'
     except:
