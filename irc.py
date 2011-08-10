@@ -1,7 +1,7 @@
 from asynchat import async_chat
 from socket import AF_INET, SOCK_STREAM
+import triggers
 import time
-import math
 import os
 try:
     import cPickle as pickle
@@ -76,9 +76,9 @@ class IRCClient(async_chat):
 
             elif msg[0] == '!':
                 if dest == self.nick and nick == owner:
-                    self.owner_triggers(dest, msg)
+                    triggers.owner_triggers(self, dest, msg)
                 else:
-                    self.triggers(nick, dest, msg)
+                    triggers.triggers(self, nick, dest, msg)
 
         elif code == 'TOPIC':
             chan = token[2]
@@ -93,6 +93,7 @@ class IRCClient(async_chat):
 
         elif src == 'PING':
             self.send_data('PONG %s' % token[1])
+	    self.save_seen()
         elif code == '332':
             topic = token[4].lstrip(':')
             ctr = 5
@@ -130,6 +131,7 @@ class IRCClient(async_chat):
         self.seen[nick] = [time.time(), dest, msg]
 
     def save_seen(self):
+	print 'Saving seen data to file.'
         pkl = open(self.seen_pkl, 'wb')
         pickle.dump(self.seen, pkl)
         pkl.close()
@@ -172,89 +174,3 @@ class IRCClient(async_chat):
         '''Update self.topics to new topic.'''
         t = time.ctime(time.time())
         self.topics[chan] = [topic, by, t]
-
-    def send_topic(self, chan):
-        '''Print the topic of chan.'''
-        if chan in self.topics:
-            topic, by, time_ch = self.topics[chan]
-
-            if '!' in by:
-                by, user, host = self.split_netmask(by)
-
-            if ':' not in time_ch:
-                time_ch = time.ctime(int(time_ch))
-
-            self.msg(chan, 'Topic for %s is: "%s" set by %s on %s' % (chan,
-	                                                    topic, by, time_ch))
-
-    def triggers(self, nick, dest, message):
-        '''Actions to perform when a trigger is triggered.'''
-        trigger, sep, msg = message.partition(' ')
-
-        if trigger == '!echo':
-            self.msg(dest, msg)
-        elif trigger == '!topic':
-            self.send_topic(dest)
-        elif trigger == '!seen':
-            now = time.time()
-            who, _, _ = msg.partition(' ')
-	    if msg != '':
-		if who in self.seen.keys():
-		    then, chan, said = self.seen[who]
-		    delta = time.time() - then
-		    seen = ('%s, %s was last seen in %s %s ago saying: %s' % (nick, who, chan, self.time_ago(delta), said))
-		    self.msg(dest, seen)
-		else:
-		    self.msg(dest, 'I have not seen %s before.' % who)
-
-    def owner_triggers(self, dest, message):
-        '''Triggers which are only triggered in PM from bot owner.'''
-        trigger, sep, text = message.partition(' ')
-
-        if trigger == '!raw':
-            self.send_data(text)
-
-        else:
-            dest, sep, msg = text.partition(' ')
-            if trigger == '!say':
-                #!say <nick/channel> <text>
-                self.msg(dest, msg)
-            elif trigger == '!do':
-                #!do <nick/channel> <text>
-                self.action(dest, msg)
-            elif trigger == '!join':
-                self.join(dest)
-            elif trigger == '!part':
-                self.part(dest, msg)
-
-    def time_ago(self, diff):
-        stime = ''
-        if diff <= 60:
-            return '%s %s' % (str(int(diff)), 'second' if diff is 1 else 'seconds')
-
-        else:
-            if (diff / 604800) >= 1:
-                factor = int(math.floor(diff / 604800))
-                diff -= 604800 * factor
-                stime = '%s %s ' % (factor, 'week' if factor is 1 else 'weeks')
-            if diff > 0:
-                if (diff / 86400) >= 1:
-                    factor = int(math.floor(diff / 86400))
-                    diff -= 86400 * factor
-                    stime += '%s %s ' % (factor, 'day' if factor is 1 else
-                                         'days')
-            if diff > 0:
-                if (diff / 3600) >= 1:
-                    factor = int(math.floor(diff / 3600))
-                    diff -= 3600 * factor
-                    stime += '%s %s ' % (factor, 'hour' if factor is 1 else
-                                         'hours')
-            if diff > 0:
-                if (diff / 60) >= 1:
-                    factor = int(math.floor(diff / 60))
-                    diff -= 60 * factor
-                    stime += '%s %s ' % (factor, 'minute' if factor is 1 else
-		                         'minutes')
-            if diff > 0:
-                stime += '%s seconds' % factor
-        return stime
