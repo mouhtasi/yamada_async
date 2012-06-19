@@ -12,7 +12,7 @@ class IRCClient(async_chat):
     terminator = '\r\n'
     ctcp_version = None
 
-    def __init__(self, host, port, nick, user, nick_pass, channels, log):
+    def __init__(self, host, port, owner, nick, user, nick_pass, channels, log):
         async_chat.__init__(self)
         self.host = host
         self.port = port
@@ -28,6 +28,7 @@ class IRCClient(async_chat):
         self.seen = {}
         self.seen_pkl = 'seen.pkl'
         self.load_seen()
+	self.owner = owner
 
     def connection_made(self):
         '''Actions to take when a connection is made with the server.'''
@@ -75,7 +76,7 @@ class IRCClient(async_chat):
                     self.notice(nick, '\x01PING\x01')
 
             elif msg[0] == '!':
-                if dest == self.nick and nick == owner:
+                if dest == self.nick and nick == self.owner:
                     triggers.owner_triggers(self, dest, msg)
                 else:
                     triggers.triggers(self, nick, dest, msg)

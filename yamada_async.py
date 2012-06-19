@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     log = logger.Logger(logfile)
 
-    client = irc.IRCClient(config['host'], config['port'], config['nick'],
+    client = irc.IRCClient(config['host'], config['port'], owner, config['nick'],
                            config['username'], '' if (config['nick_pass'] is None)
                            else config['nick_pass'], config['channels'], log)
 
